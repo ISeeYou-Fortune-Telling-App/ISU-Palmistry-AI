@@ -1,56 +1,131 @@
-# Fortune On Your Hand: View-Invariant Machine Palmistry
-## Summary
-Our *Palmistry principal lines detection software* is implemented by 4 steps below. Our main challenge was to read the principal lines on a palm regardless of the **view direction** and **illumination**:   
-1) Warping a tilted palm image  
-2) Detecting principal lines on a palm  
-3) Classifying the lines  
-4) Measuring the length of each line  
+# 🔮 Fortune On Your Hand: Ứng Dụng Chiêm Tinh AI Bất Biến Theo Góc Nhìn
+
+## 📋 Tóm Tắt
+
+**Phần mềm phát hiện các đường chính trên lòng bàn tay** của chúng tôi được triển khai theo 4 bước chính. Thách thức chính của chúng tôi là đọc các đường chính trên lòng bàn tay **bất kể hướng nhìn** và **điều kiện ánh sáng**:
+
+1. **Chỉnh sửa hình ảnh lòng bàn tay bị nghiêng**
+2. **Phát hiện các đường chính trên lòng bàn tay**
+3. **Phân loại các đường**
+4. **Đo độ dài của từng đường**
+
 <img width="1362" alt="model_architecture" src="https://user-images.githubusercontent.com/81272473/208795260-48ba6c8f-92a1-4b01-9471-6a4703ad0aff.png">
-For palm image rectification, we used MediaPipe to extract interest points and implemented warping with the points. For principal line detection, we built a deep learning model and trained the model with palm image dataset. For line classification, we used K-means clustering to allocate each pixel to specific line. For length measurement, we set a threshold for each principal line with the landmarks obtained by MediaPipe.
 
-## Environment
-The codes are written based on Python 3.7.6. These are the requirements for running the codes:
-- torch
-- torchvision
-- scikit-image
-- opencv-python
-- pillow-heif
-- mediapipe
+Để chỉnh sửa hình ảnh lòng bàn tay, chúng tôi sử dụng MediaPipe để trích xuất các điểm quan trọng và triển khai biến dạng với các điểm này. Để phát hiện đường chính, chúng tôi xây dựng mô hình học sâu và huấn luyện mô hình với tập dữ liệu hình ảnh lòng bàn tay. Để phân loại đường, chúng tôi sử dụng K-means clustering để phân bổ từng pixel cho đường cụ thể. Để đo độ dài, chúng tôi đặt ngưỡng cho từng đường chính với các mốc được lấy bởi MediaPipe.
 
-In order to install the requirements, run `pip install -r ./code/requirements.txt`.
+## 🚀 Cài Đặt Môi Trường
 
-## Run
-1. Before running the codes, **a palm image for input(.heic or .jpg)** should be prepared in the `./code/inputs` directory. We provided four sample inputs.
-2. Run `read_palm.py` by the command below. After running the code, result files will be saved in the `./code/results` directory.
+### 📦 Yêu Cầu Hệ Thống
+- **Python 3.7.6+**
+- **Windows/Linux/MacOS**
+
+### 🔧 Cài Đặt Virtual Environment
+
+#### Bước 1: Tạo Virtual Environment
 ```bash
-> python ./code/read_palm.py --input [filename].[jpg, heic]
+# Từ thư mục gốc của dự án (palmistry/)
+python -m venv palm_env
 ```
 
-## Results
+#### Bước 2: Kích Hoạt Virtual Environment
+
+**Windows (PowerShell):**
+```powershell
+# Từ thư mục gốc của dự án
+palm_env\Scripts\Activate.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+# Từ thư mục gốc của dự án
+palm_env\Scripts\activate.bat
+```
+
+**Linux/Mac:**
+```bash
+# Từ thư mục gốc của dự án
+source palm_env/bin/activate
+```
+
+#### Bước 3: Cài Đặt Các Thư Viện Cần Thiết
+```bash
+# Đảm bảo đã kích hoạt virtual environment
+pip install -r code/requirements.txt
+```
+
+### 📚 Các Thư Viện Chính
+- `torch` - PyTorch cho học sâu
+- `torchvision` - Thư viện thị giác máy tính
+- `scikit-image` - Xử lý hình ảnh
+- `opencv-python` - OpenCV cho thị giác máy tính
+- `pillow-heif` - Hỗ trợ định dạng HEIF
+- `mediapipe` - Phát hiện điểm landmark bàn tay
+
+## 🎯 Chạy Ứng Dụng
+
+### Chuẩn Bị Dữ Liệu Đầu Vào
+1. **Chuẩn bị hình ảnh lòng bàn tay** (.jpg hoặc .heic) trong thư mục `./code/input/`
+2. Dự án đã cung cấp hình ảnh mẫu: `hand70.jpg`
+
+### Chạy Phân Tích
+```bash
+# Từ thư mục gốc của dự án (palmistry/)
+python code/read_palm.py --input hand70.jpg
+```
+
+**Ví dụ đầy đủ:**
+```powershell
+# Windows PowerShell
+PS C:\Users\Windows\Downloads\palmistry> & "palm_env\Scripts\python.exe" code/read_palm.py --input hand70.jpg
+```
+
+### Kết Quả
+Sau khi chạy, các file kết quả sẽ được lưu trong thư mục `./code/results/`:
+- `result.jpg` - Hình ảnh kết quả với các đường được đánh dấu
+- `palm_lines.png` - Các đường chính được phát hiện
+- `warped_palm.jpg` - Hình ảnh lòng bàn tay đã được chỉnh sửa
+- Và các file khác...
+
+## 📊 Ví Dụ Kết Quả
+
+### Lòng Bàn Tay Chuẩn
 <img width="1371" alt="standard" src="https://user-images.githubusercontent.com/81272473/208797334-9cf56f18-01b1-46e5-9bab-5a38a696d05f.png">
+
+### Lòng Bàn Tay Bị Nghiêng
 <img width="1361" alt="tilted" src="https://user-images.githubusercontent.com/81272473/208797357-fe007daf-0d24-48b0-80af-21d79b64db4a.png">
 
-## Line Segment implementation
-Update: 22.12.03 21:57
-- Assumption
-  - line이 image의 테두리까지 가는 경우가 없음 (이 경우 scikit의 skeletonize가 종종 안됨. skeletonize 되더라도 grouping 알고리즘 조금 수정 필요)
-  - 선들이 교차하는 점은 최대 하나 (test case에 따랐음. 약간의 추가 구현으로 처리 가능하기는 함)
+## 🔍 Chi Tiết Triển Khai Phân Đoạn Đường
 
-- line grouping
-  - return value : list of lines, each lines are also a list of pixels
-  ```
-  example : [ [[1, 2], [2, 3]], [[10, 11], [11, 11]] ]
-  ```
-  
-  - explanation of implementation
-    1. 전체 픽셀에 대해 둘레 8픽셀 중 0이 아닌 값을 count
-    2. count 결과물은 0: 선 위에 없음, 1: 선의 끝, 2: 선의 중간, 3: 선의 교차점으로 구분됨
-    3. 선의 끝인 pixel에서 시작해서 주변 8픽셀을 탐색, count가 0이 아니고 방문하지 않은 pixel을 따라감
-    4. 가다보면 count가 1이나 3인 pixel에 도달
-    5. 1인 pixel이면 line을 하나 찾은 것이므로 저장하고 역방향 탐색이 되지 않도록 for문에서 제외. 3인 pixel은 line을 따로 저장해놨다가 추후 조치
-    6. 3으로 끝난 line들끼리 이을 수 있나 확인: 시작점, 끝점 차이 확인해서 방향이 반대인 모든 조합들을 이어서 line에 저장
-    7. 저장한 line들을 return
-    
-## Issues
-  - skeletonize가 붙어있지 않던 선을 붙이는 경우 있음 (1 case, 선 하나가 약간 길게 나오게 됨) -> 추가 test 필요
-  - 끊어진 라인 처리가 애매함 : 현재는 무시하고 진행한 상태, grouping된 선들 gradient 계산하면 할 수야 있기는 한데 잘못하면 이상한 선들끼리 이어질 수 있음. 이런 케이스를 숨기는게 좋아보이긴 함...
+**Cập nhật: 22.12.03 21:57**
+
+### Giả Định
+- Đường không đi đến biên của hình ảnh (trong trường hợp này, skeletonize của scikit thường không hoạt động. Ngay cả khi skeletonize được, cần sửa đổi thuật toán nhóm một chút)
+- Các đường giao nhau tại tối đa một điểm (theo test case. Có thể xử lý với một số triển khai bổ sung)
+
+### Nhóm Đường
+- **Giá trị trả về**: danh sách các đường, mỗi đường cũng là danh sách các pixel
+```python
+# Ví dụ: [ [[1, 2], [2, 3]], [[10, 11], [11, 11]] ]
+```
+
+### Giải Thích Triển Khai
+1. Đối với tất cả pixel, đếm các giá trị khác 0 trong 8 pixel xung quanh
+2. Kết quả đếm: 0: không trên đường, 1: cuối đường, 2: giữa đường, 3: điểm giao nhau
+3. Bắt đầu từ pixel cuối đường, khám phá 8 pixel xung quanh, theo pixel có count ≠ 0 và chưa được thăm
+4. Tiếp tục cho đến khi đạt pixel có count = 1 hoặc 3
+5. Pixel count = 1: tìm thấy một đường, lưu và loại trừ khỏi vòng lặp để tránh khám phá ngược. Pixel count = 3: lưu đường riêng để xử lý sau
+6. Kiểm tra các đường kết thúc bằng 3 có thể nối với nhau không: kiểm tra sự khác biệt điểm đầu và cuối để xác định hướng ngược lại cho tất cả tổ hợp và nối thành đường
+7. Trả về các đường đã lưu
+
+## ⚠️ Vấn Đề Đã Biết
+
+- **Skeletonize có thể nối các đường không liên quan** (1 trường hợp, một đường có thể dài hơn một chút) → Cần thêm test
+- **Xử lý đường bị đứt đoạn không rõ ràng**: Hiện tại bỏ qua và tiếp tục, có thể tính gradient của các đường đã nhóm để xử lý, nhưng có thể nối nhầm đường → Có lẽ nên ẩn các trường hợp này...
+
+## 🤝 Đóng Góp
+
+Chúng tôi hoan nghênh mọi đóng góp! Vui lòng tạo issue hoặc pull request nếu bạn có ý tưởng cải thiện.
+
+## 📄 Giấy Phép
+
+Dự án này được phát triển cho mục đích nghiên cứu và giáo dục.
