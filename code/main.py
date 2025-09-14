@@ -3,7 +3,7 @@ import shutil
 import uuid
 import tempfile
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from pathlib import Path
 
 # Import palm reading functions
@@ -137,15 +137,7 @@ async def root():
     """
     Root endpoint
     """
-    return {
-        "message": "Palm Reading API is running",
-        "endpoints": {
-            "predict": "/predict",
-            "health": "/health",
-            "docs": "/docs",
-            "api-docs": "/api-docs"
-        }
-    }
+    return {"message": "Palm Reading API is running", "endpoint": "/predict"}
 
 @app.get("/health")
 async def health_check():
@@ -153,13 +145,6 @@ async def health_check():
     Health check endpoint
     """
     return {"status": "healthy"}
-
-@app.get("/api-docs")
-async def api_docs():
-    """
-    Redirect to API documentation
-    """
-    return RedirectResponse(url="/docs")
 
 if __name__ == "__main__":
     import uvicorn
