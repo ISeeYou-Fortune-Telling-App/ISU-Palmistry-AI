@@ -1,0 +1,43 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Ignore virtual environments
+palm_env/
+venv/
+env/
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore Docker files
+docker/
+Dockerfile
+docker-compose.yaml
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore logs
+*.log
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore input/output folders (will be created at runtime)
+input/
+results/
+
+# Ignore documentation
+README.md
+Makefile

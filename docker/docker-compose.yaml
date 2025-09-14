@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  palmistry-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: palmistry-api
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount checkpoint directory
+      - ../code/checkpoint:/app/checkpoint:ro
+    restart: unless-stopped
