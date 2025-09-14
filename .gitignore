@@ -1,0 +1,7 @@
+.idea
+.DS_Store
+*.zip
+*.tar.gz
+palm_env/
+code/__pycache__/
+__pycache__/
