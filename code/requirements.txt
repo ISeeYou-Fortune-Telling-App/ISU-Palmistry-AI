@@ -4,3 +4,7 @@ scikit-image
 opencv-python
 pillow-heif
 mediapipe
+fastapi
+uvicorn
+python-multipart
+requests
