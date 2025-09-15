@@ -9,6 +9,21 @@ def classify_line_length(tip_position, thresholds):
             return i
     return len(thresholds)  # Mức cao nhất
 
+def calculate_line_length(line_points):
+    """Tính toán chiều dài thực tế của đường chỉ tay (tính bằng pixel)"""
+    if not line_points or len(line_points) < 2:
+        return 0
+    
+    total_length = 0
+    for i in range(1, len(line_points)):
+        x1, y1 = line_points[i-1]
+        x2, y2 = line_points[i]
+        # Tính khoảng cách Euclidean giữa 2 điểm liên tiếp
+        segment_length = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+        total_length += segment_length
+    
+    return round(total_length)
+
 def measure(path_to_warped_image_mini, lines):
     heart_thres_x = [0] * 9  # 9 ngưỡng cho 10 mức
     head_thres_x = [0] * 9
@@ -102,42 +117,42 @@ def measure(path_to_warped_image_mini, lines):
 
         # Nội dung mô tả cho 10 mức độ khác nhau
         heart_descriptions = [
-            "Đường tình cảm cực ngắn - bạn vô cùng thận trọng trong tình yêu, cần thời gian dài để tin tưởng ai đó.",
-            "Đường tình cảm rất ngắn - bạn có xu hướng kín đáo, ưa thích tình yêu ổn định và lâu bền.",
-            "Đường tình cảm ngắn - bạn tập trung vào chất lượng hơn số lượng, trân trọng mỗi mối quan hệ.",
-            "Đường tình cảm khá ngắn - bạn cân nhắc kỹ lưỡng trước khi yêu nhưng rất chung thủy.",
-            "Đường tình cảm trung bình - bạn cân bằng hoàn hảo giữa lý trí và cảm xúc trong tình yêu.",
-            "Đường tình cảm khá dài - bạn dễ dàng thể hiện tình cảm và quan tâm đến người khác.",
-            "Đường tình cảm dài - bạn rất cởi mở trong tình yêu, dễ đồng cảm và chia sẻ.",
-            "Đường tình cảm rất dài - bạn có trái tim rộng mở, yêu thương sâu sắc và chân thành.",
-            "Đường tình cảm cực dài - bạn là người lãng mạn cực độ, sống hết mình vì tình yêu.",
-            "Đường tình cảm siêu dài - bạn có tình yêu vô bờ bến, sẵn sàng hy sinh tất cả vì người mình yêu."
+            "cực ngắn - bạn vô cùng thận trọng trong tình yêu, cần thời gian dài để tin tưởng ai đó.",
+            "rất ngắn - bạn có xu hướng kín đáo, ưa thích tình yêu ổn định và lâu bền.",
+            "ngắn - bạn tập trung vào chất lượng hơn số lượng, trân trọng mỗi mối quan hệ.",
+            "khá ngắn - bạn cân nhắc kỹ lưỡng trước khi yêu nhưng rất chung thủy.",
+            "trung bình - bạn cân bằng hoàn hảo giữa lý trí và cảm xúc trong tình yêu.",
+            "khá dài - bạn dễ dàng thể hiện tình cảm và quan tâm đến người khác.",
+            "dài - bạn rất cởi mở trong tình yêu, dễ đồng cảm và chia sẻ.",
+            "rất dài - bạn có trái tim rộng mở, yêu thương sâu sắc và chân thành.",
+            "cực dài - bạn là người lãng mạn cực độ, sống hết mình vì tình yêu.",
+            "siêu dài - bạn có tình yêu vô bờ bến, sẵn sàng hy sinh tất cả vì người mình yêu."
         ]
         
         head_descriptions = [
-            "Đường trí tuệ cực ngắn - bạn là người hành động, thích quyết định tức thời và theo trực giác.",
-            "Đường trí tuệ rất ngắn - bạn ưa thích sự đơn giản, không thích phức tạp hóa vấn đề.",
-            "Đường trí tuệ ngắn - bạn tập trung sâu vào một lĩnh vực và trở thành chuyên gia.",
-            "Đường trí tuệ khá ngắn - bạn có tư duy thực tế, giải quyết vấn đề một cách hiệu quả.",
-            "Đường trí tuệ trung bình - bạn cân bằng giữa tư duy logic và trực giác một cách hoàn hảo.",
-            "Đường trí tuệ khá dài - bạn thích tìm hiểu nhiều chủ đề và có khả năng học hỏi nhanh.",
-            "Đường trí tuệ dài - bạn có tư duy phân tích tốt, thích nghiên cứu và khám phá.",
-            "Đường trí tuệ rất dài - bạn có trí thông minh xuất sắc, khả năng tư duy phức tạp cao.",
-            "Đường trí tuệ cực dài - bạn là thiên tài, có khả năng tư duy đa chiều và sáng tạo.",
-            "Đường trí tuệ siêu dài - bạn có trí tuệ phi thường, khả năng nhận thức vượt trội."
+            "cực ngắn - bạn là người hành động, thích quyết định tức thời và theo trực giác.",
+            "rất ngắn - bạn ưa thích sự đơn giản, không thích phức tạp hóa vấn đề.",
+            "ngắn - bạn tập trung sâu vào một lĩnh vực và trở thành chuyên gia.",
+            "khá ngắn - bạn có tư duy thực tế, giải quyết vấn đề một cách hiệu quả.",
+            "trung bình - bạn cân bằng giữa tư duy logic và trực giác một cách hoàn hảo.",
+            "khá dài - bạn thích tìm hiểu nhiều chủ đề và có khả năng học hỏi nhanh.",
+            "dài - bạn có tư duy phân tích tốt, thích nghiên cứu và khám phá.",
+            "rất dài - bạn có trí thông minh xuất sắc, khả năng tư duy phức tạp cao.",
+            "cực dài - bạn là thiên tài, có khả năng tư duy đa chiều và sáng tạo.",
+            "siêu dài - bạn có trí tuệ phi thường, khả năng nhận thức vượt trội."
         ]
         
         life_descriptions = [
-            "Đường sinh mệnh cực ngắn - bạn cực kỳ độc lập, tự chủ hoàn toàn trong mọi quyết định.",
-            "Đường sinh mệnh rất ngắn - bạn rất tự lực, ít khi cần sự giúp đỡ từ người khác.",
-            "Đường sinh mệnh ngắn - bạn thích tự giải quyết vấn đề, có tinh thần tự lập cao.",
-            "Đường sinh mệnh khá ngắn - bạn độc lập nhưng biết khi nào cần hợp tác với người khác.",
-            "Đường sinh mệnh trung bình - bạn cân bằng giữa độc lập và hợp tác một cách hoàn hảo.",
-            "Đường sinh mệnh khá dài - bạn thích làm việc nhóm và tìm kiếm lời khuyên từ người khác.",
-            "Đường sinh mệnh dài - bạn có năng lượng tốt, thích giao lưu và kết nối với mọi người.",
-            "Đường sinh mệnh rất dài - bạn có sức sống mạnh mẽ, thích hoạt động xã hội và giúp đỡ người khác.",
-            "Đường sinh mệnh cực dài - bạn tràn đầy năng lượng, có khả năng lãnh đạo và truyền cảm hứng.",
-            "Đường sinh mệnh siêu dài - bạn có nguồn năng lượng vô tận, sống hết mình và lan tỏa tích cực."
+            "cực ngắn - bạn cực kỳ độc lập, tự chủ hoàn toàn trong mọi quyết định.",
+            "rất ngắn - bạn rất tự lực, ít khi cần sự giúp đỡ từ người khác.",
+            "ngắn - bạn thích tự giải quyết vấn đề, có tinh thần tự lập cao.",
+            "khá ngắn - bạn độc lập nhưng biết khi nào cần hợp tác với người khác.",
+            "trung bình - bạn cân bằng giữa độc lập và hợp tác một cách hoàn hảo.",
+            "khá dài - bạn thích làm việc nhóm và tìm kiếm lời khuyên từ người khác.",
+            "dài - bạn có năng lượng tốt, thích giao lưu và kết nối với mọi người.",
+            "rất dài - bạn có sức sống mạnh mẽ, thích hoạt động xã hội và giúp đỡ người khác.",
+            "cực dài - bạn tràn đầy năng lượng, có khả năng lãnh đạo và truyền cảm hứng.",
+            "siêu dài - bạn có nguồn năng lượng vô tận, sống hết mình và lan tỏa tích cực."
         ]
 
     # Kiểm tra đường tình cảm
@@ -147,7 +162,8 @@ def measure(path_to_warped_image_mini, lines):
         heart_line_tip = heart_line_points[0]
         heart_content_1 = 'Đường tình cảm chi phối mọi vấn đề về trái tim, bao gồm tình yêu, tình bạn và cam kết.'
         heart_level = classify_line_length(heart_line_tip[0], heart_thres_x)
-        heart_content_2 = heart_descriptions[heart_level]
+        heart_length = calculate_line_length(heart_line_points)
+        heart_content_2 = f'Đường tình cảm {heart_descriptions[heart_level]} (chiều dài: {heart_length} pixel)'
         draw.line(heart_line_points, fill="red", width=width)
         contents.extend([heart_content_1, heart_content_2])
     else:
@@ -160,7 +176,8 @@ def measure(path_to_warped_image_mini, lines):
         head_line_tip = head_line_points[-1]
         head_content_1 = 'Đường trí tuệ cho biết về sự tò mò trí thức và khả năng tư duy của bạn.'
         head_level = classify_line_length(head_line_tip[0], head_thres_x)
-        head_content_2 = head_descriptions[head_level]
+        head_length = calculate_line_length(head_line_points)
+        head_content_2 = f'Đường trí tuệ {head_descriptions[head_level]} (chiều dài: {head_length} pixel)'
         draw.line(head_line_points, fill="green", width=width)
         contents.extend([head_content_1, head_content_2])
     else:
@@ -173,7 +190,8 @@ def measure(path_to_warped_image_mini, lines):
         life_line_tip = life_line_points[-1]
         life_content_1 = 'Đường sinh mệnh tiết lộ trải nghiệm, sức sống và nhiệt huyết của bạn. Lưu ý, nó không liên quan đến tuổi thọ!'
         life_level = classify_line_length(life_line_tip[1], life_thres_y)
-        life_content_2 = life_descriptions[life_level]
+        life_length = calculate_line_length(life_line_points)
+        life_content_2 = f'Đường sinh mệnh {life_descriptions[life_level]} (chiều dài: {life_length} pixel)'
         draw.line(life_line_points, fill="blue", width=width)
         contents.extend([life_content_1, life_content_2])
     else:
