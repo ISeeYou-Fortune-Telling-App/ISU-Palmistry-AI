@@ -15,7 +15,7 @@ build:
 	@echo "✅ Build completed successfully!"
 
 # Start the service
-start:
+up:
 	@echo "Starting Palmistry API service..."
 	@docker-compose -f $(COMPOSE_FILE) up -d
 	@echo "🚀 Service started at http://localhost:8080"

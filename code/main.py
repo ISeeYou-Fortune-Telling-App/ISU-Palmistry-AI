@@ -2,9 +2,13 @@ import os
 import shutil
 import uuid
 import tempfile
+import json
+import time
+from threading import Timer
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pathlib import Path
+from typing import Dict, Any, Optional
 
 # Import palm reading functions
 from tools import *
@@ -13,12 +17,46 @@ from rectification import *
 from detection import *
 from classification import *
 from measurement import *
+from dtos.palm_response import PalmResponse
+from dtos.line_response import LineResponse
+
+# In-memory storage for processed results (in production, use Redis or database)
+processed_results = {}
+
+def cleanup_expired_results():
+    """Clean up expired results (older than 10 minutes)"""
+    current_time = time.time()
+    expired_ids = [
+        result_id for result_id, data in processed_results.items()
+        if current_time - data['timestamp'] > 600  # 10 minutes
+    ]
+    for result_id in expired_ids:
+        data = processed_results.pop(result_id, {})
+        if 'image_path' in data and os.path.exists(data['image_path']):
+            os.unlink(data['image_path'])
+
+class PalmAnalysisResponse(Response):
+    """Custom response class that includes both image and analysis data"""
+    def __init__(self, image_path: str, palm_response: PalmResponse):
+        # Read the image file
+        with open(image_path, "rb") as f:
+            image_content = f.read()
+        
+        # Create headers that include both image and metadata
+        headers = {
+            "Content-Type": "image/jpeg",
+            "X-Palm-Analysis": json.dumps(palm_response.to_dict()),
+            "X-Palm-Message": palm_response.message
+        }
+        
+        super().__init__(content=image_content, headers=headers)
 
 app = FastAPI(title="Palm Reading API", description="API for palm reading and analysis")
 
 def process_palm_image(input_filename: str):
     """
     Process palm image using the existing palm reading logic
+    Returns both the temporary image path and structured line data
     """
     path_to_input_image = f'input/{input_filename}'
 
@@ -55,10 +93,30 @@ def process_palm_image(input_filename: str):
         # 3. Line classification
         lines = classify(path_to_palmline_image)
 
-        # 4. Length measurement
-        im, contents = measure(path_to_warped_image_mini, lines)
+        # 4. Length measurement with structured data
+        im, line_responses = measure_with_structured_data(path_to_warped_image_mini, lines)
 
-        # 5. Save result
+        # 5. Save result - Convert line_responses to expected format for save_result
+        contents = []
+        
+        # Initialize default values for each line type
+        heart_content_1 = "Đường tình cảm chi phối mọi vấn đề về trái tim, bao gồm tình yêu, tình bạn và cam kết."
+        heart_content_2 = "Không tìm thấy đường tình cảm trên lòng bàn tay của bạn."
+        head_content_1 = "Đường trí tuệ cho biết về sự tò mò trí thức và khả năng tư duy của bạn."
+        head_content_2 = "Không tìm thấy đường trí tuệ trên lòng bàn tay của bạn."
+        life_content_1 = "Đường sinh mệnh tiết lộ trải nghiệm, sức sống và nhiệt huyết của bạn. Lưu ý, nó không liên quan đến tuổi thọ!"
+        life_content_2 = "Không tìm thấy đường sinh mệnh trên lòng bàn tay của bạn."
+        
+        # Update with actual results from line_responses
+        for line in line_responses:
+            if line.line_type == "Đường tình cảm":
+                heart_content_2 = line.description
+            elif line.line_type == "Đường trí tuệ":
+                head_content_2 = line.description
+            elif line.line_type == "Đường sinh mệnh":
+                life_content_2 = line.description
+        
+        contents = [heart_content_1, heart_content_2, head_content_1, head_content_2, life_content_1, life_content_2]
         save_result(im, contents, resize_value, path_to_result)
 
         # Create temporary file for result
@@ -74,17 +132,128 @@ def process_palm_image(input_filename: str):
         if os.path.exists(input_dir_path):
             shutil.rmtree(input_dir_path, ignore_errors=True)
         
-        return temp_path
+        return temp_path, line_responses
     except Exception as e:
         # Clean up results directory on error
         if os.path.exists(results_dir):
             shutil.rmtree(results_dir, ignore_errors=True)
         raise Exception(f"Error processing palm image: {str(e)}")
 
+@app.post("/analyze", response_model=Dict[str, Any])
+async def analyze_palm(file: UploadFile = File(...)):
+    """
+    Bước 1: Upload ảnh và nhận analysis JSON + session_id
+    Ảnh sẽ được lưu trong buffer với session_id để lấy sau
+    """
+    cleanup_expired_results()
+    
+    # Check if file is an image
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    # Create input directory if it doesn't exist
+    input_dir = Path("input")
+    input_dir.mkdir(exist_ok=True)
+
+    # Generate unique filename to avoid conflicts
+    file_extension = Path(file.filename).suffix
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    input_path = input_dir / unique_filename
+    
+    temp_result_path = None
+    session_id = str(uuid.uuid4())
+
+    try:
+        # Save uploaded file
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Process the image
+        temp_result_path, line_responses = process_palm_image(unique_filename)
+
+        # Check if result file exists
+        if not os.path.exists(temp_result_path):
+            raise HTTPException(status_code=500, detail="Failed to generate result")
+
+        # Store result in memory buffer with session_id
+        processed_results[session_id] = {
+            'image_path': temp_result_path,
+            'line_responses': line_responses,
+            'timestamp': time.time()
+        }
+
+        # Return JSON analysis with session_id
+        return {
+            "session_id": session_id,
+            "message": "Palm reading analysis completed successfully",
+            "lines": [
+                {
+                    "line_type": line.line_type,
+                    "description": line.description,
+                    "length": line.length
+                } for line in line_responses
+            ]
+        }
+
+    except Exception as e:
+        # Clean up temporary result file on error
+        if temp_result_path and os.path.exists(temp_result_path):
+            os.unlink(temp_result_path)
+        # Clean up uploaded file if it still exists
+        if input_path.exists():
+            input_path.unlink()
+        # Clean up input directory if it still exists
+        if input_dir.exists():
+            shutil.rmtree(input_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/result/{session_id}")
+async def get_result_image(session_id: str):
+    """
+    Bước 2: Lấy ảnh kết quả từ buffer bằng session_id
+    """
+    cleanup_expired_results()
+    
+    if session_id not in processed_results:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    
+    result_data = processed_results[session_id]
+    image_path = result_data['image_path']
+    
+    if not os.path.exists(image_path):
+        # Clean up invalid entry
+        processed_results.pop(session_id, None)
+        raise HTTPException(status_code=404, detail="Result image not found")
+    
+    # Return the image (file will be cleaned up by periodic cleanup)
+    return FileResponse(
+        path=image_path,
+        media_type='image/jpeg',
+        filename=f'result_{session_id}.jpg'
+    )
+
+@app.delete("/result/{session_id}")
+async def cleanup_result(session_id: str):
+    """
+    Bước 3 (Optional): Xóa kết quả khỏi buffer sau khi đã lấy xong
+    """
+    if session_id not in processed_results:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    result_data = processed_results.pop(session_id)
+    
+    # Clean up image file
+    if 'image_path' in result_data and os.path.exists(result_data['image_path']):
+        os.unlink(result_data['image_path'])
+    
+    return {"message": "Result cleaned up successfully"}
+
+# Legacy endpoints (giữ lại để tương thích)
 @app.post("/predict")
 async def predict_palm(file: UploadFile = File(...)):
     """
-    Endpoint to upload palm image and get prediction result
+    Endpoint to upload palm image and get prediction result with analysis data in headers
+    Returns: Image file with analysis data in response headers
     """
     # Check if file is an image
     if not file.content_type.startswith('image/'):
@@ -107,7 +276,139 @@ async def predict_palm(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
 
         # Process the image (this will clean up input and results directories)
-        temp_result_path = process_palm_image(unique_filename)
+        temp_result_path, line_responses = process_palm_image(unique_filename)
+
+        # Check if result file exists
+        if not os.path.exists(temp_result_path):
+            raise HTTPException(status_code=500, detail="Failed to generate result")
+
+        # Create FileResponse for the image
+        image_response = FileResponse(
+            path=temp_result_path,
+            media_type='image/jpeg',
+            filename='result.jpg'
+        )
+        
+        # Create PalmResponse object
+        palm_response = PalmResponse(
+            image_file=image_response,
+            lines=line_responses,
+            message="Palm reading analysis completed successfully"
+        )
+
+        # Return custom response with image and analysis data
+        response = PalmAnalysisResponse(temp_result_path, palm_response)
+        
+        # Clean up temporary result file after creating response
+        if temp_result_path and os.path.exists(temp_result_path):
+            os.unlink(temp_result_path)
+            
+        return response
+
+    except Exception as e:
+        # Clean up temporary result file on error
+        if temp_result_path and os.path.exists(temp_result_path):
+            os.unlink(temp_result_path)
+        # Clean up uploaded file if it still exists
+        if input_path.exists():
+            input_path.unlink()
+        # Clean up input directory if it still exists
+        if input_dir.exists():
+            shutil.rmtree(input_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict-json", response_model=Dict[str, Any])
+async def predict_palm_json(file: UploadFile = File(...)):
+    """
+    Endpoint to upload palm image and get only JSON analysis data (no image)
+    """
+    # Check if file is an image
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    # Create input directory if it doesn't exist
+    input_dir = Path("input")
+    input_dir.mkdir(exist_ok=True)
+
+    # Generate unique filename to avoid conflicts
+    file_extension = Path(file.filename).suffix
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    input_path = input_dir / unique_filename
+    
+    temp_result_path = None
+
+    try:
+        # Save uploaded file
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Process the image (this will clean up input and results directories)
+        temp_result_path, line_responses = process_palm_image(unique_filename)
+
+        # Check if result file exists
+        if not os.path.exists(temp_result_path):
+            raise HTTPException(status_code=500, detail="Failed to generate result")
+
+        # Create FileResponse for the image
+        image_response = FileResponse(
+            path=temp_result_path,
+            media_type='image/jpeg',
+            filename='result.jpg'
+        )
+        
+        # Create PalmResponse object
+        palm_response = PalmResponse(
+            image_file=image_response,
+            lines=line_responses,
+            message="Palm reading analysis completed successfully"
+        )
+
+        # Clean up temporary result file
+        if temp_result_path and os.path.exists(temp_result_path):
+            os.unlink(temp_result_path)
+
+        # Return only JSON data
+        return palm_response.to_dict()
+
+    except Exception as e:
+        # Clean up temporary result file on error
+        if temp_result_path and os.path.exists(temp_result_path):
+            os.unlink(temp_result_path)
+        # Clean up uploaded file if it still exists
+        if input_path.exists():
+            input_path.unlink()
+        # Clean up input directory if it still exists
+        if input_dir.exists():
+            shutil.rmtree(input_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict-with-image")
+async def predict_palm_with_image(file: UploadFile = File(...)):
+    """
+    Legacy endpoint that returns the image file directly (for backward compatibility)
+    """
+    # Check if file is an image
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    # Create input directory if it doesn't exist
+    input_dir = Path("input")
+    input_dir.mkdir(exist_ok=True)
+
+    # Generate unique filename to avoid conflicts
+    file_extension = Path(file.filename).suffix
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    input_path = input_dir / unique_filename
+    
+    temp_result_path = None
+
+    try:
+        # Save uploaded file
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Process the image (this will clean up input and results directories)
+        temp_result_path, _ = process_palm_image(unique_filename)
 
         # Check if result file exists
         if not os.path.exists(temp_result_path):
@@ -137,7 +438,26 @@ async def root():
     """
     Root endpoint
     """
-    return {"message": "Palm Reading API is running", "endpoint": "/predict"}
+    return {
+        "message": "Palm Reading API is running",
+        "recommended_workflow": {
+            "step_1": "POST /analyze - Upload image, get JSON analysis + session_id",
+            "step_2": "GET /result/{session_id} - Get processed image from buffer", 
+            "step_3": "DELETE /result/{session_id} - Clean up (optional, auto-cleanup after 10min)"
+        },
+        "legacy_endpoints": {
+            "/predict": "Upload palm image and get result image with analysis data in response headers",
+            "/predict-json": "Upload palm image and get only JSON analysis data",
+            "/predict-with-image": "Upload palm image and get result image file only"
+        },
+        "example_usage": {
+            "workflow": [
+                "1. POST /analyze (with image) -> get session_id + analysis JSON",
+                "2. GET /result/{session_id} -> download processed image", 
+                "3. DELETE /result/{session_id} -> cleanup (optional)"
+            ]
+        }
+    }
 
 @app.get("/health")
 async def health_check():
