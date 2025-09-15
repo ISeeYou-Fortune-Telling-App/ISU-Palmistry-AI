@@ -31,36 +31,19 @@ def resize(path_to_warped_image, path_to_warped_image_clean, path_to_warped_imag
     pil_img.resize((resize_value, resize_value), resample=Image.NEAREST).save(path_to_warped_image_mini)
     pil_img_clean.resize((resize_value, resize_value), resample=Image.NEAREST).save(path_to_warped_image_clean_mini)
 
-def save_result(im, contents, resize_value, path_to_result):
+def save_result_simple(im, path_to_result):
+    """
+    Save result with only the image and detected lines, no text descriptions
+    """
     if im is None:
         print_error()
     else:
-        heart_content_1, heart_content_2, head_content_1, head_content_2, life_content_1, life_content_2 = contents
-        image_height, image_width = im.size
-        fontsize = 12
-        
-        plt.tick_params(
-            axis='both',          # changes apply to the x-axis
-            which='both',      # both major and minor ticks are affected
-            bottom=False,      # ticks along the bottom edge are off
-            left=False,         # ticks along the top edge are off
-            labelbottom=False,
-            labelleft=False
-        )
-        plt.title('Kết quả xem Chỉ tay của bạn!', fontsize=14, y=1.01)
-
-        plt.text(image_width + 15, 15, "Đường tình duyên", color='r', fontsize=fontsize)
-        plt.text(image_width + 15, 35, heart_content_1, fontsize=fontsize)
-        plt.text(image_width + 15, 55, heart_content_2, fontsize=fontsize)
-        plt.text(image_width + 15, 80, "Đường trí tuệ", color='g', fontsize=fontsize)
-        plt.text(image_width + 15, 100, head_content_1, fontsize=fontsize)
-        plt.text(image_width + 15, 120, head_content_2, fontsize=fontsize)
-        plt.text(image_width + 15, 145, "Đường sinh mệnh", color='b', fontsize=fontsize)
-        plt.text(image_width + 15, 165, life_content_1, fontsize=fontsize)
-        plt.text(image_width + 15, 185, life_content_2, fontsize=fontsize)
-    
+        plt.figure(figsize=(8, 8))
+        plt.axis('off')  # Remove axes completely
         plt.imshow(im)
-        plt.savefig(path_to_result, bbox_inches = "tight")
+        plt.tight_layout()
+        plt.savefig(path_to_result, bbox_inches='tight', pad_inches=0, dpi=150)
+        plt.close()  # Close the figure to free memory
 
 def print_error():
     print('Palm lines not properly detected! Please use another palm image.')
